@@ -15,9 +15,10 @@ protocol ScannerVCDelegate: AnyObject {
 final class ScannerVC: UIViewController {
     let captureSession = AVCaptureSession()
     var previewLayer: AVCaptureVideoPreviewLayer?
-    weak var scannerDelegate: ScannerVCDelegate
+    weak var scannerDelegate: ScannerVCDelegate?
     
     init(scannerDelegate: ScannerVCDelegate) {
+        super.init(nibName: nil, bundle: nil)
         self.scannerDelegate = scannerDelegate
     }
     
@@ -32,17 +33,49 @@ final class ScannerVC: UIViewController {
         
         do {
             try videoInput = AVCaptureDeviceInput(device: videoCaptureDevice)
-        } 
-        catch {
+        } catch {
             return
         }
         
         if captureSession.canAddInput(videoInput) {
             captureSession.addInput(videoInput)
-        } 
-        else {
+        } else {
             return
         }
+        
+        let metaDataOutput = AVCaptureMetadataOutput()
+        
+        if captureSession.canAddOutput(metaDataOutput) {
+            captureSession.addOutput(metaDataOutput)
+            metaDataOutput.setMetadataObjectsDelegate(self, queue: DispatchQueue.main)
+            metaDataOutput.metadataObjectTypes = [.ean8, .ean13]
+        } else {
+            return
+        }
+        
+        previewLayer = AVCaptureVideoPreviewLayer(session: captureSession)
+        previewLayer!.videoGravity = .resizeAspectFill
+        view.layer.addSublayer(previewLayer!)
+        
+        captureSession.startRunning()
     }
     
+}
+
+extension ScannerVC: AVCaptureMetadataOutputObjectsDelegate {
+    func metadataOutput(_ output: AVCaptureMetadataOutput, didOutput metadataObjects: [AVMetadataObject], from connection: AVCaptureConnection) {
+        guard let object = metadataObjects.first else {
+            return
+        }
+        
+        guard let machineReadableObject = object as? AVMetadataMachineReadableCodeObject else {
+            return
+        }
+        
+        guard let barcode = machineReadableObject.stringValue else {
+            return
+        }
+        
+        scannerDelegate?.didFind(barcode: barcode)
+    }
 }
