@@ -9,8 +9,8 @@ import AVFoundation
 import UIKit
 
 enum CameraError: String {
-    case invalidDeviceInput = "Something is wrong with the camera. Unable to capture the input."
-    case invalidScannedValue = "The value scanned is not valid. This app scans EAN-8 and EAN-13."
+    case invalidDeviceInput
+    case invalidScannedValue 
 }
 
 // Protocol for communicating barcode scanning results back to other classes
